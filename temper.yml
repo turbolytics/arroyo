@@ -1,0 +1,6 @@
+temper: "0.1"
+project: arroyo
+
+levels:
+  - name: ci
+    description: pytest against Arroyo 0.16.0 and SeaweedFS (S3) in Docker

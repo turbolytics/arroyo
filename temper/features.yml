@@ -1,0 +1,11 @@
+# The FileSystem sink, in the three ways a pipeline can write files.
+features:
+  - id: sink.v2
+    description: "The FileSystem sink on S3, the default in 0.16 (sink.version v2)."
+    requires: [ci]
+  - id: sink.v1
+    description: "The FileSystem sink on S3 with 'sink.version' = 'v1'."
+    requires: [ci]
+  - id: sink.local
+    description: "The FileSystem sink on a local path, which uses the local writer."
+    requires: [ci]

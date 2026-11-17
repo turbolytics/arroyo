@@ -1,0 +1,7 @@
+id: sink.local
+kind: sink
+feature: sink.local
+answers:
+  sink.contract:
+    every_row_written_when_the_source_finishes: supported
+    committed_rows_have_no_gaps_or_duplicates: supported

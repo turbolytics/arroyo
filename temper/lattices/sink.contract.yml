@@ -1,0 +1,13 @@
+id: sink.contract
+description: >
+  The docs say the FileSystem sink writes all data exactly once, and that a
+  FileSystem source finishes the job once it has read every file. Every row
+  the source emits ends up in exactly one committed file.
+applies_to: sink
+requires: [ci]
+members:
+  # A bounded source (a counter with message_count) finishes. Every row is in
+  # the output once the job reports Finished.
+  - key: every_row_written_when_the_source_finishes
+  # While the job runs, committed rows have no gaps and no duplicates.
+  - key: committed_rows_have_no_gaps_or_duplicates
