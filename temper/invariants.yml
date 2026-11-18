@@ -1,0 +1,96 @@
+# Each claim quotes or restates Arroyo's docs. The expected output is always
+# computed from the input the test generated, never from Arroyo.
+invariants:
+  # --- delivery: every path from a Kafka topic to a sink ---------------------
+  - id: delivery.no_loss
+    claim: >
+      Every message read from the source topic reaches the sink, whatever fault
+      the pipeline recovers from. ("We can continue processing exactly where we
+      left off", concepts.)
+    applies_to: path
+    class: safety
+    family: delivery
+    requires: [controller, worker_leader]
+  - id: delivery.no_duplicates
+    claim: >
+      Every message reaches the sink at most once. A read_committed consumer, or
+      the committed files, hold each message once.
+    applies_to: path
+    class: safety
+    family: delivery
+    requires: [controller, worker_leader]
+  - id: delivery.recovers
+    claim: >
+      After the last fault, the job returns to Running and the sink catches up
+      to the source within two minutes. It never restarts forever.
+    applies_to: path
+    class: liveness
+    family: delivery
+    requires: [controller, worker_leader]
+  - id: path.kafka_s3.files_complete
+    claim: Every committed file parses completely. No committed file is truncated.
+    applies_to: path.kafka_s3
+    class: safety
+    family: delivery
+    requires: [controller, worker_leader]
+
+  # --- time: windows and watermarks ------------------------------------------
+  - id: window.exact_counts
+    claim: >
+      Each window's aggregate equals the aggregate of the on-time events whose
+      timestamps fall in it.
+    applies_to: window
+    class: safety
+    family: time
+    requires: [controller, worker_leader]
+  - id: window.emits_once
+    claim: Each window and key is emitted exactly once.
+    applies_to: window
+    class: safety
+    family: time
+    requires: [controller, worker_leader]
+  - id: window.complete
+    claim: Every window that ends before the watermark is emitted.
+    applies_to: window
+    class: liveness
+    family: time
+    requires: [controller, worker_leader]
+  - id: window.same_output_after_failure
+    claim: >
+      The output with faults equals the output without them ("identical results
+      as if we had never failed", concepts).
+    applies_to: window
+    class: safety
+    family: time
+    requires: [controller, worker_leader]
+  - id: window.late_events_dropped
+    claim: An event older than the watermark when it arrives is not counted.
+    applies_to: window
+    class: safety
+    family: time
+    requires: [controller, worker_leader]
+  - id: window.on_time_events_counted
+    claim: >
+      An out-of-order event at or after the watermark is counted, including an
+      event exactly at the watermark.
+    applies_to: window
+    class: safety
+    family: time
+    requires: [controller, worker_leader]
+  - id: window.slow_partition_not_late
+    claim: >
+      With several partitions, the watermark is the slowest active partition's.
+      A fast partition never makes another partition's on-time events late.
+      (Implied by the watermark's definition, not stated in the docs.)
+    applies_to: window
+    class: safety
+    family: time
+    requires: [controller, worker_leader]
+  - id: window.idle_partition_releases
+    claim: >
+      A partition with no events for idle_micros (30 seconds by default) stops
+      holding windows open.
+    applies_to: window
+    class: liveness
+    family: time
+    requires: [controller, worker_leader]

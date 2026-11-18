@@ -1,0 +1,20 @@
+id: faults.contract
+description: >
+  The faults a production pipeline recovers from. A supported answer means every
+  delivery invariant holds under that fault. The set comes from the docs'
+  recovery claims (concepts, architecture) and how pipelines are deployed.
+applies_to: path
+requires: [controller, worker_leader]
+members:
+  # kill -9 of a worker process at a random moment
+  - key: worker_kill
+  # kill -9 of the whole node, then a restart
+  - key: node_kill
+  # stop with a final checkpoint, then resume, as a deploy does
+  - key: stop_with_checkpoint
+  # stop without a checkpoint, then resume from the last one
+  - key: stop_immediately
+  # the object store holding checkpoints pauses, then resumes
+  - key: storage_outage
+  # kill -9 while the sink commits a checkpoint
+  - key: kill_during_commit

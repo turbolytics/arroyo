@@ -1,0 +1,16 @@
+id: path.kafka_kafka_exactly_once
+kind: path
+feature: sink.kafka.exactly_once
+answers:
+  faults.contract:
+    worker_kill: supported
+    node_kill: supported
+    stop_with_checkpoint: supported
+    stop_immediately: supported
+    storage_outage: supported
+    kill_during_commit:
+      unsupported: true
+      reason: >
+        The docs say the Kafka sink "does not cleanly recover from failures during
+        the commit phase."
+      tracked_by: "#224"

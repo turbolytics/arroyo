@@ -1,0 +1,9 @@
+temper: "0.1"
+project: arroyo
+
+# Levels are the two control planes 0.16 ships. The same tests run on both.
+levels:
+  - name: controller
+    description: Single-node cluster, the default job controller mode, Arroyo 0.16.0 in Docker
+  - name: worker_leader
+    description: Single-node cluster with job-controller = "worker", opt-in in 0.16 and the default in 0.17

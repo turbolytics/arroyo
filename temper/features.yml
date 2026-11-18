@@ -1,0 +1,23 @@
+# What Arroyo does, from its public docs (doc.arroyo.dev).
+features:
+  - id: source.kafka
+    description: Reads a Kafka topic exactly once by storing offsets in checkpoints, reading only committed messages by default.
+    requires: [controller, worker_leader]
+  - id: sink.kafka.exactly_once
+    description: Writes to Kafka through transactions that commit with each checkpoint, the default commit mode.
+    requires: [controller, worker_leader]
+  - id: sink.kafka.at_least_once
+    description: Writes to Kafka as rows arrive, and may repeat rows after a failure.
+    requires: [controller, worker_leader]
+  - id: sink.filesystem
+    description: Writes files to object storage and commits them with each checkpoint.
+    requires: [controller, worker_leader]
+  - id: window.tumble
+    description: Aggregates over fixed, non-overlapping event-time windows that close when the watermark passes.
+    requires: [controller, worker_leader]
+  - id: window.hop
+    description: Aggregates over sliding event-time windows defined by a width and a slide.
+    requires: [controller, worker_leader]
+  - id: window.session
+    description: Aggregates over event-time windows that close after a gap in activity.
+    requires: [controller, worker_leader]

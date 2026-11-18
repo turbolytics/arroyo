@@ -1,0 +1,17 @@
+id: path.kafka_kafka_at_least_once
+kind: path
+feature: sink.kafka.at_least_once
+exempt:
+  - invariant: delivery.no_duplicates
+    reason: >
+      At-least-once mode writes rows as they arrive, so the docs allow duplicates
+      after a failure.
+    proven_by: test_at_least_once_loses_nothing
+answers:
+  faults.contract:
+    worker_kill: supported
+    node_kill: supported
+    stop_with_checkpoint: supported
+    stop_immediately: supported
+    storage_outage: supported
+    kill_during_commit: supported

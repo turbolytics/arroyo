@@ -3,3 +3,8 @@ target/
 .env
 .vscode/
 
+
+# Temper map
+.temper/
+.venv-temper/
+.pytest_cache/

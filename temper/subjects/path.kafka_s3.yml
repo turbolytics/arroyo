@@ -1,0 +1,11 @@
+id: path.kafka_s3
+kind: path
+feature: sink.filesystem
+answers:
+  faults.contract:
+    worker_kill: supported
+    node_kill: supported
+    stop_with_checkpoint: supported
+    stop_immediately: supported
+    storage_outage: supported
+    kill_during_commit: supported
