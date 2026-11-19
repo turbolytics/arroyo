@@ -23,7 +23,9 @@ import harness
 N = 40000
 RATE = 1000  # 40 seconds of input
 RECOVERY_SECONDS = 120
-COMMON = ["worker_kill", "node_kill", "stop_with_checkpoint", "stop_immediately", "storage_outage"]
+COMMON = ["worker_kill", "node_kill", "stop_with_checkpoint", "stop_immediately", "storage_outage",
+          # Jepsen-style: pauses, a partition, and stalls past the 60 s transaction timeout
+          "worker_pause", "broker_pause", "node_partition", "long_storage_stall", "long_broker_pause"]
 PATHS = {
     # subject: (commit mode, faults it answers supported)
     "path.kafka_kafka_exactly_once": ("exactly_once", COMMON),

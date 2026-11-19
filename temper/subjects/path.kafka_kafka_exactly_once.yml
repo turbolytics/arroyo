@@ -8,6 +8,13 @@ answers:
     stop_with_checkpoint: supported
     stop_immediately: supported
     storage_outage: supported
+    worker_pause: supported
+    broker_pause: supported
+    node_partition: supported
+    long_storage_stall: supported
+    long_broker_pause: supported
+    quiet_restart: supported
+    idle_partition_restart: supported
     kill_during_commit:
       unsupported: true
       reason: >

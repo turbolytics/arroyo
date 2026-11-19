@@ -3,9 +3,16 @@
 delivery.no_duplicates: {controller: covered, worker_leader: missing}
 delivery.no_loss: {controller: covered, worker_leader: missing}
 delivery.recovers: {controller: covered, worker_leader: missing}
+faults.contract/broker_pause: {controller: covered, worker_leader: missing}
+faults.contract/idle_partition_restart: {controller: failing, worker_leader: missing}
 faults.contract/kill_during_commit: {controller: unenforced, worker_leader: unenforced}
+faults.contract/long_broker_pause: {controller: failing, worker_leader: missing}
+faults.contract/long_storage_stall: {controller: failing, worker_leader: missing}
 faults.contract/node_kill: {controller: covered, worker_leader: missing}
+faults.contract/node_partition: {controller: failing, worker_leader: missing}
+faults.contract/quiet_restart: {controller: failing, worker_leader: missing}
 faults.contract/stop_immediately: {controller: covered, worker_leader: missing}
 faults.contract/stop_with_checkpoint: {controller: covered, worker_leader: missing}
 faults.contract/storage_outage: {controller: covered, worker_leader: missing}
 faults.contract/worker_kill: {controller: covered, worker_leader: missing}
+faults.contract/worker_pause: {controller: covered, worker_leader: missing}

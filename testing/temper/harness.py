@@ -240,6 +240,47 @@ def pause_storage(seconds=15):
     return f"paused storage {seconds}s"
 
 
+KAFKA_CONTAINER = "temper-kafka"
+NETWORK = "temper-arroyo"
+
+
+def pause_worker(rng, seconds=45):
+    """SIGSTOPs a worker past the heartbeat timeout, then SIGCONTs it.
+
+    The controller declares it dead and reschedules while it is frozen. When it
+    wakes, it is a zombie that still holds its producer and open transaction.
+    """
+    pids = worker_pids()
+    if not pids:
+        raise FaultNotInjected("no worker process to pause")
+    victim = rng.choice(pids)
+    sh("docker", "exec", CONTAINER, "sh", "-c", f"kill -STOP {victim}")
+    state = sh("docker", "exec", CONTAINER, "sh", "-c", f"awk '{{print $3}}' /proc/{victim}/stat").stdout.strip()
+    if state != "T":
+        raise FaultNotInjected(f"worker pid {victim} is in state {state!r}, not stopped")
+    time.sleep(seconds)
+    alive = victim in worker_pids()
+    sh("docker", "exec", CONTAINER, "sh", "-c", f"kill -CONT {victim}")
+    return f"paused worker pid {victim} {seconds}s" + ("" if alive else " (it was reaped while paused)")
+
+
+def pause_container(name, seconds):
+    if sh("docker", "pause", name).returncode != 0:
+        raise FaultNotInjected(f"could not pause {name}")
+    time.sleep(seconds)
+    sh("docker", "unpause", name)
+    return f"paused {name} {seconds}s"
+
+
+def partition_node(seconds=20):
+    if sh("docker", "network", "disconnect", NETWORK, CONTAINER).returncode != 0:
+        raise FaultNotInjected("could not disconnect the node")
+    time.sleep(seconds)
+    sh("docker", "network", "connect", NETWORK, CONTAINER, check=True)
+    wait_api()
+    return f"partitioned the node {seconds}s"
+
+
 def inject(fault, pid, rng, watcher):
     """Injects one fault. Kills are timed outside the commit phase and checked after."""
     if fault in ("worker_kill", "node_kill"):
@@ -262,6 +303,16 @@ def inject(fault, pid, rng, watcher):
         return stop_and_resume(pid, "immediate")
     if fault == "storage_outage":
         return pause_storage()
+    if fault == "worker_pause":
+        return pause_worker(rng)
+    if fault == "broker_pause":
+        return pause_container(KAFKA_CONTAINER, 20)
+    if fault == "node_partition":
+        return partition_node(20)
+    if fault == "long_storage_stall":
+        return pause_container(STORAGE, 75)
+    if fault == "long_broker_pause":
+        return pause_container(KAFKA_CONTAINER, 75)
     raise ValueError(fault)
 
 

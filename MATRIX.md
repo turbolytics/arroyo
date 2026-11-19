@@ -11,7 +11,7 @@ Exempt cells are excused by a passing proof. Regenerate with `temper matrix`.
 
 | covered | exempt | failing | missing | unenforced |
 | ---: | ---: | ---: | ---: | ---: |
-| 19 | 1 | 0 | 96 | 2 |
+| 27 | 1 | 6 | 124 | 2 |
 
 ## Features
 
@@ -99,3 +99,10 @@ The faults a production pipeline recovers from. A supported answer means every d
 | `stop_immediately` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
 | `storage_outage` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
 | `kill_during_commit` | ✅ ⬜ | ⏳ ⏳ | ⬜ ⬜ |
+| `worker_pause` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
+| `broker_pause` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
+| `node_partition` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |
+| `long_storage_stall` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |
+| `long_broker_pause` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |
+| `quiet_restart` | ❌ ⬜ | ❌ ⬜ | ⬜ ⬜ |
+| `idle_partition_restart` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |

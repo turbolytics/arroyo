@@ -18,3 +18,19 @@ members:
   - key: storage_outage
   # kill -9 while the sink commits a checkpoint
   - key: kill_during_commit
+  # Jepsen-style faults (jepsen.io analyses of Redpanda 21.10.1 and Bufstream 0.1.0)
+  # SIGSTOP a worker past the 30 s heartbeat timeout, then SIGCONT it (a zombie)
+  - key: worker_pause
+  # the Kafka broker pauses for 20 s, then resumes
+  - key: broker_pause
+  # the Arroyo node loses its network (Kafka and storage) for 20 s
+  - key: node_partition
+  # the object store pauses for 75 s, past Kafka's 60 s transaction timeout
+  - key: long_storage_stall
+  # the Kafka broker pauses for 75 s, past its 60 s transaction timeout
+  - key: long_broker_pause
+  # Lifecycle, no fault: stop with a checkpoint and resume (a deploy), with no
+  # input in between, then stop again while input arrives, then resume
+  - key: quiet_restart
+  # the same, but only some source partitions receive input between the deploys
+  - key: idle_partition_restart
