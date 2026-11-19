@@ -1,13 +1,13 @@
 # What Arroyo does, from its public docs (doc.arroyo.dev).
 features:
   - id: source.kafka
-    description: Reads a Kafka topic exactly once by storing offsets in checkpoints, reading only committed messages by default.
+    description: Reads a Kafka topic exactly once by storing offsets in checkpoints.
     requires: [controller, worker_leader]
   - id: sink.kafka.exactly_once
-    description: Writes to Kafka through transactions that commit with each checkpoint, the default commit mode.
+    description: "With 'sink.commit_mode' = 'exactly_once', writes to Kafka through transactions that commit with each checkpoint."
     requires: [controller, worker_leader]
   - id: sink.kafka.at_least_once
-    description: Writes to Kafka as rows arrive, and may repeat rows after a failure.
+    description: Writes to Kafka as rows arrive, and may repeat rows after a failure. This is the default commit mode.
     requires: [controller, worker_leader]
   - id: sink.filesystem
     description: Writes files to object storage and commits them with each checkpoint.
