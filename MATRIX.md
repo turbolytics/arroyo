@@ -11,16 +11,17 @@ Exempt cells are excused by a passing proof. Regenerate with `temper matrix`.
 
 | covered | exempt | failing | missing | unenforced |
 | ---: | ---: | ---: | ---: | ---: |
-| 27 | 1 | 6 | 124 | 2 |
+| 150 | 2 | 22 | 54 | 2 |
 
 ## Features
 
 | Feature | What it does | controller | worker_leader |
 | --- | --- | --- | --- |
-| `source.kafka` | Reads a Kafka topic exactly once by storing offsets in checkpoints. | ✅ | ⬜ |
-| `sink.kafka.exactly_once` | With 'sink.commit_mode' = 'exactly_once', writes to Kafka through transactions that commit with each checkpoint. | ✅ | ⬜ |
-| `sink.kafka.at_least_once` | Writes to Kafka as rows arrive, and may repeat rows after a failure. This is the default commit mode. | ✅ | ⬜ |
-| `sink.filesystem` | Writes files to object storage and commits them with each checkpoint. | ⬜ | ⬜ |
+| `source.kafka` | Reads a Kafka topic exactly once by storing offsets in checkpoints. | ✅ | ✅ |
+| `sink.kafka.exactly_once` | With 'sink.commit_mode' = 'exactly_once', writes to Kafka through transactions that commit with each checkpoint. | ✅ | ✅ |
+| `sink.kafka.at_least_once` | Writes to Kafka as rows arrive, and may repeat rows after a failure. This is the default commit mode. | ✅ | ✅ |
+| `sink.filesystem` | Writes JSON or Parquet files to object storage and commits them with each checkpoint. | ✅ | ✅ |
+| `sink.iceberg` | Writes Parquet data files to an Iceberg table through a REST catalog and commits a snapshot with each checkpoint. | ✅ | ✅ |
 | `window.tumble` | Aggregates over fixed, non-overlapping event-time windows that close when the watermark passes. | ⬜ | ⬜ |
 | `window.hop` | Aggregates over sliding event-time windows defined by a width and a slide. | ⬜ | ⬜ |
 | `window.session` | Aggregates over event-time windows that close after a gap in activity. | ⬜ | ⬜ |
@@ -31,21 +32,29 @@ Exempt cells are excused by a passing proof. Regenerate with `temper matrix`.
 
 | Invariant | Subject | controller | worker_leader |
 | --- | --- | --- | --- |
-| `delivery.no_duplicates` | `path.kafka_kafka_at_least_once` | ☑️ | ⬜ |
-| `delivery.no_duplicates` | `path.kafka_kafka_exactly_once` | ✅ | ⬜ |
-| `delivery.no_duplicates` | `path.kafka_s3` | ⬜ | ⬜ |
-| `delivery.no_loss` | `path.kafka_kafka_at_least_once` | ✅ | ⬜ |
-| `delivery.no_loss` | `path.kafka_kafka_exactly_once` | ✅ | ⬜ |
-| `delivery.no_loss` | `path.kafka_s3` | ⬜ | ⬜ |
-| `delivery.recovers` | `path.kafka_kafka_at_least_once` | ✅ | ⬜ |
-| `delivery.recovers` | `path.kafka_kafka_exactly_once` | ✅ | ⬜ |
-| `delivery.recovers` | `path.kafka_s3` | ⬜ | ⬜ |
-| `path.kafka_s3.files_complete` | `path.kafka_s3` | ⬜ | ⬜ |
+| `delivery.no_duplicates` | `path.kafka_files_json` | ✅ | ✅ |
+| `delivery.no_duplicates` | `path.kafka_files_parquet` | ✅ | ✅ |
+| `delivery.no_duplicates` | `path.kafka_iceberg` | ✅ | ✅ |
+| `delivery.no_duplicates` | `path.kafka_kafka_at_least_once` | ☑️ | ☑️ |
+| `delivery.no_duplicates` | `path.kafka_kafka_exactly_once` | ✅ | ✅ |
+| `delivery.no_loss` | `path.kafka_files_json` | ✅ | ✅ |
+| `delivery.no_loss` | `path.kafka_files_parquet` | ✅ | ✅ |
+| `delivery.no_loss` | `path.kafka_iceberg` | ✅ | ✅ |
+| `delivery.no_loss` | `path.kafka_kafka_at_least_once` | ✅ | ✅ |
+| `delivery.no_loss` | `path.kafka_kafka_exactly_once` | ✅ | ✅ |
+| `delivery.recovers` | `path.kafka_files_json` | ✅ | ✅ |
+| `delivery.recovers` | `path.kafka_files_parquet` | ✅ | ✅ |
+| `delivery.recovers` | `path.kafka_iceberg` | ✅ | ✅ |
+| `delivery.recovers` | `path.kafka_kafka_at_least_once` | ✅ | ✅ |
+| `delivery.recovers` | `path.kafka_kafka_exactly_once` | ✅ | ✅ |
+| `files.complete` | `path.kafka_files_json` | ✅ | ✅ |
+| `files.complete` | `path.kafka_files_parquet` | ✅ | ✅ |
+| `files.complete` | `path.kafka_iceberg` | ✅ | ✅ |
 
 - `delivery.no_duplicates` — Every message reaches the sink at most once. A read_committed consumer, or the committed files, hold each message once.
 - `delivery.no_loss` — Every message read from the source topic reaches the sink, whatever fault the pipeline recovers from. ("We can continue processing exactly where we left off", concepts.)
 - `delivery.recovers` — After the last fault, the job returns to Running and the sink catches up to the source within two minutes. It never restarts forever.
-- `path.kafka_s3.files_complete` — Every committed file parses completely. No committed file is truncated.
+- `files.complete` — Every committed file parses completely, whatever fault the pipeline recovers from. No reader sees a truncated or half-written file.
 
 ### time
 
@@ -91,18 +100,18 @@ Exempt cells are excused by a passing proof. Regenerate with `temper matrix`.
 
 The faults a production pipeline recovers from. A supported answer means every delivery invariant holds under that fault. The set comes from the docs' recovery claims (concepts, architecture) and how pipelines are deployed.
 
-| Member | `path.kafka_kafka_at_least_once` | `path.kafka_kafka_exactly_once` | `path.kafka_s3` |
-| --- | --- | --- | --- |
-| `worker_kill` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
-| `node_kill` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
-| `stop_with_checkpoint` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
-| `stop_immediately` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
-| `storage_outage` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
-| `kill_during_commit` | ✅ ⬜ | ⏳ ⏳ | ⬜ ⬜ |
-| `worker_pause` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
-| `broker_pause` | ✅ ⬜ | ✅ ⬜ | ⬜ ⬜ |
-| `node_partition` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |
-| `long_storage_stall` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |
-| `long_broker_pause` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |
-| `quiet_restart` | ❌ ⬜ | ❌ ⬜ | ⬜ ⬜ |
-| `idle_partition_restart` | ✅ ⬜ | ❌ ⬜ | ⬜ ⬜ |
+| Member | `path.kafka_files_json` | `path.kafka_files_parquet` | `path.kafka_iceberg` | `path.kafka_kafka_at_least_once` | `path.kafka_kafka_exactly_once` |
+| --- | --- | --- | --- | --- | --- |
+| `worker_kill` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `node_kill` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `stop_with_checkpoint` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `stop_immediately` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `storage_outage` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `kill_during_commit` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ⏳ ⏳ |
+| `worker_pause` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `broker_pause` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ |
+| `node_partition` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ❌ |
+| `long_storage_stall` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ❌ ❌ |
+| `long_broker_pause` | ✅ ✅ | ✅ ✅ | ✅ ✅ | ✅ ✅ | ❌ ✅ |
+| `quiet_restart` | ❌ ❌ | ❌ ❌ | ❌ ❌ | ❌ ❌ | ❌ ❌ |
+| `idle_partition_restart` | ❌ ❌ | ❌ ❌ | ❌ ❌ | ✅ ✅ | ❌ ❌ |

@@ -6,7 +6,7 @@ exempt:
     reason: >
       At-least-once mode writes rows as they arrive, so the docs allow duplicates
       after a failure.
-    proven_by: testing/temper/test_delivery.py::test_at_least_once_loses_nothing
+    proven_by: testing/temper/test_paths.py::test_at_least_once_loses_nothing
 answers:
   faults.contract:
     worker_kill: supported

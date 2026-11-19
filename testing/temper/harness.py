@@ -35,10 +35,19 @@ def sh(*args, check=False):
 # --- Arroyo -----------------------------------------------------------------
 
 
-def start_arroyo(mode):
+# Time scale. The fast suite shrinks Arroyo's clocks and the faults together, so
+# the same races happen in seconds: a worker paused past the heartbeat timeout,
+# a stall past Kafka's transaction timeout.
+HEARTBEAT_TIMEOUT_S = 12  # default 30; workers heartbeat every 5 s (arroyo-worker lib.rs), so keep two ticks of margin
+
+
+def start_arroyo(mode, heartbeat_s=None):
     sh("docker", "rm", "-f", CONTAINER)
+    extra = []
+    if heartbeat_s:
+        extra = ["-e", f"ARROYO__PIPELINE__WORKER_HEARTBEAT_TIMEOUT={heartbeat_s}s"]
     sh("docker", "run", "-d", "--name", CONTAINER, "--network", "temper-arroyo", "-p", "25115:5115",
-       "-e", f"ARROYO__JOB_CONTROLLER={mode}",
+       "-e", f"ARROYO__JOB_CONTROLLER={mode}", *extra,
        "-e", f"ARROYO__CHECKPOINT_URL=s3://arroyo/checkpoints-{uuid.uuid4().hex[:8]}",
        "-e", "AWS_ENDPOINT=http://seaweed:8333", "-e", "AWS_ALLOW_HTTP=true",
        "-e", "AWS_ACCESS_KEY_ID=temper", "-e", "AWS_SECRET_ACCESS_KEY=temper", "-e", "AWS_REGION=us-east-1",
@@ -99,6 +108,20 @@ def worker_pids():
     return out.split()
 
 
+def worker_pids_by_job():
+    """{job_id: [pid, ...]} from each worker's JOB_ID environment variable."""
+    out = sh("docker", "exec", CONTAINER, "sh", "-c",
+             'for p in /proc/[0-9]*; do [ "$(cat $p/comm 2>/dev/null)" = arroyo ] && '
+             'grep -q worker $p/cmdline 2>/dev/null && '
+             'echo "${p#/proc/} $(tr "\\0" "\\n" < $p/environ | grep ^JOB_ID= | cut -d= -f2)"; done').stdout
+    jobs = {}
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) == 2:
+            jobs.setdefault(parts[1], []).append(parts[0])
+    return jobs
+
+
 # --- faults -----------------------------------------------------------------
 
 
@@ -142,9 +165,9 @@ class LogWatcher:
     never need to agree.
     """
 
-    def __init__(self, job_id):
-        self.job_id = job_id
-        self.events = []  # (host time, kind, epoch)
+    def __init__(self, job_ids):
+        self.job_ids = {job_ids} if isinstance(job_ids, str) else set(job_ids)
+        self.events = []  # (host time, kind, epoch, job id)
         self._start()
 
     def _start(self):
@@ -155,8 +178,8 @@ class LogWatcher:
     def _read(self, proc):
         for raw in proc.stdout:
             m = CHECKPOINT_LINE.search(ANSI.sub("", raw))
-            if m and m.group(2) == self.job_id:
-                self.events.append((time.time(), m.group(1), int(m.group(3))))
+            if m and m.group(2) in self.job_ids:
+                self.events.append((time.time(), m.group(1), int(m.group(3)), m.group(2)))
 
     def restart(self):
         self.proc.kill()
@@ -165,12 +188,14 @@ class LogWatcher:
     def stop(self):
         self.proc.kill()
 
-    def committing_at(self, t):
-        """True if a commit had started and not finished at host time t."""
+    def committing_at(self, t, job=None):
+        """True if a commit had started and not finished at host time t (for one job, or any)."""
         state = False
-        for at, kind, _ in self.events:
+        for at, kind, _, j in self.events:
             if at > t:
                 break
+            if job is not None and j != job:
+                continue
             if kind == "Committing checkpoint":
                 state = True
             elif kind == "Finished committing checkpointing":
@@ -183,9 +208,9 @@ class LogWatcher:
         while time.time() < deadline:
             # A job with no committing operator logs no commit lines. Then any
             # moment after a finished checkpoint is outside the commit phase.
-            commits = any(kind == "Committing checkpoint" for _, kind, _ in self.events)
+            commits = any(kind == "Committing checkpoint" for _, kind, _, _ in self.events)
             marker = "Finished committing checkpointing" if commits else "Finished checkpointing"
-            done = [at for at, kind, _ in self.events if kind == marker]
+            done = [at for at, kind, _, _ in self.events if kind == marker]
             if done and low <= time.time() - done[-1] <= high and not self.committing_at(time.time()):
                 return
             time.sleep(0.02)

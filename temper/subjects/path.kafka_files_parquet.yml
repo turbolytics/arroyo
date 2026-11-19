@@ -1,6 +1,8 @@
-id: path.kafka_s3
+id: path.kafka_files_parquet
 kind: path
 feature: sink.filesystem
+implements: [Files]
+# Shaped like Cloudflare Pipelines: raw Parquet files on R2, 10 s roll (the minimum).
 answers:
   faults.contract:
     worker_kill: supported

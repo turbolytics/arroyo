@@ -10,7 +10,10 @@ features:
     description: Writes to Kafka as rows arrive, and may repeat rows after a failure. This is the default commit mode.
     requires: [controller, worker_leader]
   - id: sink.filesystem
-    description: Writes files to object storage and commits them with each checkpoint.
+    description: Writes JSON or Parquet files to object storage and commits them with each checkpoint.
+    requires: [controller, worker_leader]
+  - id: sink.iceberg
+    description: Writes Parquet data files to an Iceberg table through a REST catalog and commits a snapshot with each checkpoint.
     requires: [controller, worker_leader]
   - id: window.tumble
     description: Aggregates over fixed, non-overlapping event-time windows that close when the watermark passes.

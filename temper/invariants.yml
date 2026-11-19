@@ -27,9 +27,11 @@ invariants:
     class: liveness
     family: delivery
     requires: [controller, worker_leader]
-  - id: path.kafka_s3.files_complete
-    claim: Every committed file parses completely. No committed file is truncated.
-    applies_to: path.kafka_s3
+  - id: files.complete
+    claim: >
+      Every committed file parses completely, whatever fault the pipeline
+      recovers from. No reader sees a truncated or half-written file.
+    applies_to: path+Files
     class: safety
     family: delivery
     requires: [controller, worker_leader]
